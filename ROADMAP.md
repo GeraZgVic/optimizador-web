@@ -62,6 +62,54 @@ Tiempos observados (RTX 4070 Ti SUPER):
 
 ---
 
+### ✅ Módulo 8 — Upscaling de video
+**Prioridad:** Alta
+**Arquitectura:** Celery + Redis + FFmpeg
+
+#### Pipeline implementado
+```
+video.mp4 (upload)
+  → FFmpeg extrae frames → /tmp/videos/{task_id}/frames/frame_000001.png ...
+  → Celery worker procesa cada frame con Real-ESRGAN (+ GFPGAN opcional)
+  → FFmpeg reensambla frames y preserva el audio original
+  → /tmp/outputs/{task_id}_enhanced.mp4
+  → Usuario descarga el video final
+```
+
+Incluye:
+- Endpoint `POST /enhance-video` para encolar videos
+- Endpoint `GET /status/{task_id}` para polling de progreso
+- Endpoint `GET /download-video/{task_id}` para descargar el resultado
+- `backend/tasks.py` con Celery app + task `process_video`
+- `backend/video_processor.py` con validación, FFprobe, FFmpeg y loop de frames
+- Panel de video separado en el frontend
+- Drop zone para `.mp4`, `.avi`, `.mov`, `.mkv`
+- Selector de escala `×2` / `×4`
+- Toggle `Restaurar caras` también para video
+- Barra de progreso con `frame actual / total`
+- Polling cada 3 segundos
+- Limpieza de temporales al finalizar
+- Si un frame falla: se loggea y se conserva el frame original
+
+Prerrequisitos ya integrados:
+- Redis instalado y validado con `redis-cli ping`
+- FFmpeg y FFprobe instalados y detectados desde config
+- Worker de Windows usando `--pool=solo`
+
+Comandos de arranque:
+
+```powershell
+.\venv\Scripts\python.exe -m backend.main
+.\venv\Scripts\celery.exe -A backend.tasks worker --pool=solo -l info
+```
+
+Limitaciones actuales:
+- El flujo fue implementado, pero todavía conviene validar con videos reales de distintos codecs
+- El polling es básico; aún no hay cancelación de tareas
+- El resultado de video se genera en `.mp4` con `libx264` + audio AAC
+
+---
+
 ## Módulos pendientes
 
 ### 🔲 Módulo 4 — Procesamiento por lote
@@ -85,22 +133,21 @@ Dependencia nueva: `JSZip` (CDN, solo frontend)
 
 ---
 
-### 🔲 Módulo 5 — Procesamiento asíncrono (Celery + Redis)
-**Prioridad:** Media — necesario para múltiples usuarios simultáneos
+### 🔲 Módulo 5 — Procesamiento asíncrono para imágenes
+**Prioridad:** Media
 
 Descripción:
-- Reemplaza el procesamiento síncrono por una cola de tareas
+- Reemplaza también el procesamiento síncrono de imágenes por una cola de tareas
 - El endpoint `/enhance` retorna un `task_id` inmediatamente
 - El frontend hace polling a `GET /status/{task_id}` cada 2 segundos
 - Workers Celery procesan las imágenes en background
-- Redis como broker de mensajes
+- Redis ya está integrado por el Módulo 8
 
 Cambios estimados:
-- `backend/tasks.py` — nuevo archivo con las Celery tasks
+- `backend/tasks.py` — agregar task específica para imágenes
 - `backend/main.py` — endpoints `/status/{task_id}` y ajuste de `/enhance`
 - `frontend/app.js` — lógica de polling
-- `requirements.txt` — agregar `celery`, `redis`
-- Requiere Redis corriendo localmente
+- Reutiliza la infraestructura ya montada
 
 ---
 
@@ -150,85 +197,3 @@ Descripción:
 
 ---
 
-### 🔲 Módulo 8 — Upscaling de video
-**Prioridad:** Alta — siguiente módulo a implementar
-**Prerrequisitos:** Redis + FFmpeg instalados en el sistema
-
-#### Contexto y decisión de arquitectura
-El procesamiento síncrono del Módulo 1 NO es viable para video. Un video de
-30 segundos a 30fps = 900 frames × ~0.4s = ~6 minutos de procesamiento.
-FastAPI/HTTP no puede mantener una petición abierta ese tiempo.
-Por eso este módulo introduce Celery + Redis obligatoriamente.
-
-#### Pipeline completo
-```
-video.mp4 (upload)
-  → FFmpeg extrae frames → /tmp/video_{id}/frames/frame_0001.png ...
-  → Celery worker procesa cada frame con Real-ESRGAN (+ GFPGAN opcional)
-  → FFmpeg reensambla frames → /tmp/outputs/video_{id}_enhanced.mp4
-  → Usuario descarga el video final
-```
-
-#### Stack nuevo requerido
-- **Redis** — broker de mensajes para Celery
-  - Windows: https://github.com/microsoftarchive/redis/releases
-  - Ejecutar: redis-server.exe
-  - Verificar: redis-cli ping → debe responder PONG
-- **FFmpeg** — extracción y reensamblado de frames
-  - Windows: https://ffmpeg.org/download.html → agregar al PATH
-  - Verificar: ffmpeg -version
-- **Celery** — worker de tareas asíncronas
-  - pip install celery redis
-
-#### Archivos a crear / modificar
-```
-backend/
-  tasks.py             ← NUEVO — Celery app + task process_video()
-  video_processor.py   ← NUEVO — lógica FFmpeg + loop de frames
-  main.py              ← MODIFICAR — nuevos endpoints de video
-  config.py            ← MODIFICAR — parámetros de video y Celery
-frontend/
-  index.html           ← MODIFICAR — sección nueva para video
-  style.css            ← MODIFICAR — estilos del panel de video
-  app.js               ← MODIFICAR — upload video + polling de progreso
-requirements.txt       ← MODIFICAR — agregar celery, redis
-```
-
-#### Endpoints nuevos
-- POST /enhance-video   → recibe video, encola tarea, retorna task_id inmediatamente
-- GET  /status/{task_id} → estado: pending/processing/done/error + frame N/total
-- GET  /download-video/{task_id} → descarga el video procesado
-
-#### UI — panel de video
-- Sección separada del panel de imágenes (no mezclar flujos)
-- Drop zone para .mp4, .avi, .mov, .mkv
-- Selector de escala (×2 o ×4) y toggle "Restaurar caras"
-- Límite recomendado: 720p máximo, <2 minutos (ajustable en config.py)
-- Barra de progreso real: "Frame 342 / 900 — 38%"
-- Polling cada 3 segundos a /status/{task_id}
-- Advertencia visible: "El procesamiento puede tardar varios minutos"
-
-#### Tiempos estimados (RTX 4070 Ti SUPER)
-- 10s a 30fps  →  300 frames  →  ~2-3 min
-- 30s a 30fps  →  900 frames  →  ~6-8 min
-- 1min a 30fps → 1800 frames  →  ~12-15 min
-- Con GFPGAN activo: ×3-4x más lento
-
-#### Parámetros a agregar en config.py
-```python
-MAX_VIDEO_SIZE_MB      = 500
-MAX_VIDEO_DURATION_SEC = 120
-MAX_VIDEO_RESOLUTION   = 1280
-VIDEO_FPS_OUTPUT       = None   # None = mismo fps que el original
-CELERY_BROKER_URL      = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND  = "redis://localhost:6379/0"
-```
-
-#### Notas críticas para Celery en Windows
-- El worker se lanza con: celery -A backend.tasks worker --pool=solo -l info
-- --pool=solo es OBLIGATORIO en Windows (los otros pools no funcionan)
-- Celery y FastAPI deben correr en terminales SEPARADAS
-- FFmpeg debe preservar el audio original en el reensamblado
-- Codec de salida: libx264 con crf=18 (alta calidad, tamaño razonable)
-- Si un frame falla: loggearlo y continuar, no abortar todo el video
-- Los frames temporales se guardan en /tmp/video_{task_id}/frames/ y se limpian al terminar

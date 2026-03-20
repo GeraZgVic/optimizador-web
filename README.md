@@ -1,7 +1,36 @@
-# Real-ESRGAN Web — Image Enhancer
+# Real-ESRGAN Web — Image & Video Enhancer
 
-Aplicación web para mejorar la calidad de imágenes usando **Real-ESRGAN**.  
-Backend en FastAPI + procesamiento con PyTorch. Frontend en HTML/CSS/JS vanilla.
+Aplicación web para mejorar imágenes y videos con **Real-ESRGAN**, con
+restauración facial opcional usando **GFPGAN**.
+
+Stack actual:
+- Backend: FastAPI + PyTorch
+- Cola asíncrona para video: Celery + Redis
+- Frontend: HTML/CSS/JS vanilla
+- Video pipeline: FFmpeg
+
+---
+
+## Funcionalidades actuales
+
+### Imágenes
+- Upscaling con Real-ESRGAN
+- Modelos disponibles:
+  - `general_x4`
+  - `general_x2`
+  - `anime_x4`
+- Comparador antes/después con slider
+- Restauración facial opcional con GFPGAN
+- Detección automática GPU / CPU
+- Descarga automática de pesos `.pth`
+
+### Videos
+- Subida de `.mp4`, `.avi`, `.mov`, `.mkv`
+- Procesamiento asíncrono con Celery
+- Extracción y reensamblado de frames con FFmpeg
+- Polling de progreso desde el frontend
+- Restauración facial opcional frame por frame
+- Preservación de audio en el video final
 
 ---
 
@@ -9,171 +38,278 @@ Backend en FastAPI + procesamiento con PyTorch. Frontend en HTML/CSS/JS vanilla.
 
 - Python 3.10 o superior
 - pip
-- ~1GB de espacio en disco (para los pesos del modelo)
-- GPU NVIDIA con CUDA (opcional pero muy recomendado)
+- Redis instalado y corriendo
+- FFmpeg instalado
+- GPU NVIDIA con CUDA opcional, pero muy recomendada
+
+En Windows, este proyecto fue preparado para correr con:
+- Redis on Windows
+- FFmpeg instalado vía WinGet
 
 ---
 
-## Instalación paso a paso
+## Instalación
 
-### 1. Clonar / descargar el proyecto
+### 1. Entrar al proyecto
 
 ```bash
-# Si usas git:
-git clone <url-del-repo>
 cd realesrgan-web
-
-# O simplemente coloca la carpeta donde quieras y entra a ella.
 ```
 
 ### 2. Crear entorno virtual
 
 ```bash
 python -m venv venv
+```
 
-# Activar:
-# Windows:
+Activar:
+
+```bash
+# Windows
 venv\Scripts\activate
-# macOS / Linux:
+
+# macOS / Linux
 source venv/bin/activate
 ```
 
 ### 3. Instalar PyTorch
 
-**Este es el paso más importante.** La versión exacta depende de si tienes GPU.
+Instala primero la variante correcta para tu sistema.
 
-**Con GPU NVIDIA (CUDA 11.8):**
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-```
+#### GPU NVIDIA con CUDA 12.1
 
-**Con GPU NVIDIA (CUDA 12.1):**
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
-**Solo CPU (sin GPU):**
+#### Solo CPU
+
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
-> Si no sabes qué versión de CUDA tienes, corre: `nvidia-smi`
-> El número en la esquina superior derecha es tu versión de CUDA.
-
-### 4. Instalar el resto de dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Verificar la instalación
+Verificación:
 
 ```bash
 python -c "import torch; print('CUDA:', torch.cuda.is_available(), '| GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'none')"
 ```
 
----
-
-## Correr la aplicación
-
-Desde la raíz del proyecto:
+### 4. Instalar dependencias del proyecto
 
 ```bash
-python -m backend.main
+pip install -r requirements.txt
+```
 
+---
+
+## Prerrequisitos para video
+
+El módulo de video requiere:
+
+### Redis
+
+Verificar:
+
+```bash
+redis-cli ping
+```
+
+Debe responder:
+
+```text
+PONG
+```
+
+### FFmpeg
+
+Verificar:
+
+```bash
+ffmpeg -version
+ffprobe -version
+```
+
+---
+
+## Cómo correr la aplicación
+
+## Opción 1 — Solo imágenes
+
+Si vas a trabajar solo con imágenes:
+
+```powershell
 .\venv\Scripts\python.exe -m backend.main
 ```
 
-Abre el navegador en: **http://localhost:8000**
+Abrir:
 
-La primera vez que uses un modelo, se descargará automáticamente (~65-130 MB).
-Después queda guardado en `backend/models/` y no se vuelve a descargar.
+```text
+http://localhost:8000
+```
+
+## Opción 2 — Imágenes + video
+
+Para video necesitas FastAPI y Celery en terminales separadas.
+
+### Terminal 1 — FastAPI
+
+```powershell
+.\venv\Scripts\python.exe -m backend.main
+```
+
+### Terminal 2 — Celery worker
+
+```powershell
+.\venv\Scripts\celery.exe -A backend.tasks worker --pool=solo -l info
+```
+
+Importante en Windows:
+- `--pool=solo` es obligatorio
+- Redis debe estar corriendo antes de iniciar Celery
+
+Luego abre:
+
+```text
+http://localhost:8000
+```
 
 ---
 
 ## Uso
 
-1. Abre http://localhost:8000
-2. Selecciona el modelo que quieras usar:
-   - **Fotos x4** — para fotos reales, mejora detalles y nitidez (↑4x resolución)
-   - **Fotos x2** — mismo modelo, resultado ↑2x
-   - **Anime x4** — optimizado para ilustraciones y anime
-3. Arrastra tu imagen o haz clic en el área de subida
-4. Haz clic en **Mejorar imagen**
-5. Espera el procesamiento (varía según tu hardware)
-6. Descarga el resultado como PNG
+## Imágenes
+
+1. Abre `http://localhost:8000`
+2. Elige modelo
+3. Opcional: activa `Restaurar caras`
+4. Sube una imagen
+5. Haz clic en `Mejorar imagen`
+6. Usa el comparador antes/después
+7. Descarga el PNG final
+
+## Videos
+
+1. Sube un video en la sección `video`
+2. Elige escala `×2` o `×4`
+3. Opcional: activa `Restaurar caras`
+4. Haz clic en `Mejorar video`
+5. Espera el avance del polling
+6. Descarga el `.mp4` final cuando termine
 
 ---
 
-## Límites de la versión actual
+## Límites actuales
+
+### Imágenes
 
 | Parámetro | Valor |
 |---|---|
-| Formatos aceptados | JPG, PNG, WEBP |
+| Formatos | JPG, PNG, WEBP |
 | Tamaño máximo | 10 MB |
-| Resolución máxima de entrada | ~1225 × 1225 px |
-| Archivos temporales | Se borran automáticamente después de 2 horas |
+| Resolución máxima | configurable en `backend/config.py` |
+
+### Videos
+
+| Parámetro | Valor |
+|---|---|
+| Formatos | MP4, AVI, MOV, MKV |
+| Tamaño máximo | 500 MB |
+| Duración máxima | 120 s |
+| Resolución máxima | 1280 px lado mayor |
 
 ---
 
-## Ajustar parámetros
+## Configuración importante
 
-Todos los parámetros configurables están en `backend/config.py`:
+Todo está centralizado en [backend/config.py](./backend/config.py).
+
+Parámetros relevantes:
 
 ```python
-TILE_SIZE          = 256    # Sube a 512 si tienes GPU con 8GB+ VRAM (más rápido)
-MAX_FILE_SIZE_MB   = 10     # Límite de tamaño de archivo
-MAX_INPUT_PIXELS   = 1_500_000  # Límite de resolución de entrada
-CLEANUP_MAX_AGE_HOURS = 2   # Cuánto tiempo se conservan los archivos temporales
+TILE_SIZE = 256
+MAX_FILE_SIZE_MB = 10
+MAX_INPUT_PIXELS = 2_000_000
+CLEANUP_MAX_AGE_HOURS = 2
+
+MAX_VIDEO_SIZE_MB = 500
+MAX_VIDEO_DURATION_SEC = 120
+MAX_VIDEO_RESOLUTION = 1280
+VIDEO_FPS_OUTPUT = None
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 ```
+
+---
+
+## Endpoints disponibles
+
+La documentación interactiva está en:
+
+```text
+http://localhost:8000/docs
+```
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/` | GET | Frontend |
+| `/health` | GET | Estado del servidor y GPU |
+| `/models` | GET | Modelos disponibles |
+| `/enhance` | POST | Procesar imagen |
+| `/download/{filename}` | GET | Descargar imagen procesada |
+| `/enhance-video` | POST | Encolar procesamiento de video |
+| `/status/{task_id}` | GET | Estado de tarea de video |
+| `/download-video/{task_id}` | GET | Descargar video procesado |
 
 ---
 
 ## Estructura del proyecto
 
-```
+```text
 realesrgan-web/
 ├── backend/
 │   ├── __init__.py
-│   ├── main.py          ← FastAPI: endpoints y servidor
-│   ├── processor.py     ← Real-ESRGAN: lógica de inferencia
-│   ├── config.py        ← todos los parámetros configurables
-│   ├── models/          ← pesos .pth descargados automáticamente
+│   ├── config.py
+│   ├── main.py
+│   ├── processor.py
+│   ├── tasks.py
+│   ├── video_processor.py
+│   ├── models/
 │   └── utils/
-│       ├── file_handler.py   ← guardar/limpiar archivos
-│       └── validator.py      ← validar imágenes
+│       ├── file_handler.py
+│       └── validator.py
 ├── frontend/
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
 ├── tmp/
-│   ├── uploads/         ← imágenes subidas (temporales)
-│   └── outputs/         ← imágenes procesadas (temporales)
+│   ├── uploads/
+│   ├── outputs/
+│   └── videos/
 ├── requirements.txt
+├── ROADMAP.md
 └── README.md
 ```
 
 ---
 
-## API REST
+## Notas operativas
 
-La documentación interactiva está en: **http://localhost:8000/docs**
-
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/` | GET | Frontend |
-| `/enhance` | POST | Procesar imagen |
-| `/download/{filename}` | GET | Descargar resultado |
-| `/models` | GET | Listar modelos disponibles |
-| `/health` | GET | Estado del servidor y GPU |
+- La primera vez que uses Real-ESRGAN o GFPGAN, descargará los pesos automáticamente.
+- GFPGAN es opcional y degrada silenciosamente si falla o no detecta caras.
+- El procesamiento de video puede tardar varios minutos.
+- Si un frame de video falla, el pipeline lo loggea y continúa.
+- Los temporales de video se limpian al terminar la tarea.
 
 ---
 
-## Próximos pasos (mejoras sugeridas)
+## Estado del proyecto
 
-- [X] Agregar slider de comparación antes/después
-- [X] Soporte para restauración de caras (GFPGAN)
-- [ ] Procesamiento asíncrono con Celery para múltiples usuarios
-- [ ] Docker Compose para despliegue en servidor
-- [ ] Rate limiting por IP
-- [ ] Historial de imágenes procesadas
+Módulos implementados:
+- Módulo 1 — MVP base
+- Módulo 2 — Comparador antes/después
+- Módulo 3 — Restauración de caras con GFPGAN
+- Módulo 8 — Upscaling de video con Celery + Redis + FFmpeg
+
+Para roadmap detallado:
+- [ROADMAP.md](./ROADMAP.md)
