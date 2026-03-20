@@ -140,6 +140,7 @@ def process_video_pipeline(
     task_dir: Path,
     model_key: str,
     face_enhance: bool,
+    gfpgan_weight: float = 0.5,
 ) -> dict:
     if model_key not in MODELS:
         raise ValueError(f"Modelo inválido para video: {model_key}")
@@ -173,6 +174,7 @@ def process_video_pipeline(
                     enhanced_frame_path,
                     model_key=model_key,
                     face_enhance=face_enhance,
+                    gfpgan_weight=gfpgan_weight,
                 )
             except Exception as e:
                 logger.warning(f"Frame {frame_path.name} falló y se conservará el original: {e}")
@@ -204,6 +206,7 @@ def process_video_pipeline(
             "download_url": f"/download-video/{task_id}",
             "total_frames": total_frames,
             "face_enhance": face_enhance,
+            "gfpgan_weight": gfpgan_weight,
         }
     finally:
         shutil.rmtree(task_dir, ignore_errors=True)

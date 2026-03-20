@@ -27,7 +27,15 @@ celery_app.conf.update(
 
 
 @celery_app.task(bind=True, name="backend.tasks.process_video")
-def process_video(self, task_id: str, input_video_path: str, task_dir: str, model_key: str, face_enhance: bool):
+def process_video(
+    self,
+    task_id: str,
+    input_video_path: str,
+    task_dir: str,
+    model_key: str,
+    face_enhance: bool,
+    gfpgan_weight: float = 0.5,
+):
     return process_video_pipeline(
         self,
         task_id=task_id,
@@ -35,4 +43,5 @@ def process_video(self, task_id: str, input_video_path: str, task_dir: str, mode
         task_dir=Path(task_dir),
         model_key=model_key,
         face_enhance=face_enhance,
+        gfpgan_weight=gfpgan_weight,
     )

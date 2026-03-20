@@ -98,6 +98,7 @@ async def enhance(
     file:         UploadFile = File(...),
     model_key:    str        = Form(DEFAULT_MODEL),
     face_enhance: bool       = Form(False),
+    gfpgan_weight: float     = Form(0.5),
 ):
     """
     Endpoint principal. Recibe una imagen, la mejora con Real-ESRGAN y
@@ -108,6 +109,7 @@ async def enhance(
     # ── 1. Leer bytes del upload ──────────────────────────────────────────────
     file_bytes = await file.read()
     logger.info(f"face_enhance recibido: {str(face_enhance).lower()}")
+    logger.info(f"gfpgan_weight recibido: {gfpgan_weight:.1f}")
 
     # ── 2. Validar extensión y tamaño ─────────────────────────────────────────
     ok, err = validate_file(file.filename, file_bytes)
@@ -143,6 +145,7 @@ async def enhance(
             output_path,
             model_key=model_key,
             face_enhance=face_enhance,
+            gfpgan_weight=gfpgan_weight,
         )
     except Exception as e:
         logger.error(f"Error en el procesamiento: {e}", exc_info=True)
@@ -172,6 +175,7 @@ async def enhance_video(
     file: UploadFile = File(...),
     scale: int = Form(4),
     face_enhance: bool = Form(False),
+    gfpgan_weight: float = Form(0.5),
 ):
     file_bytes = await file.read()
     task_id = str(uuid.uuid4())
@@ -194,11 +198,19 @@ async def enhance_video(
 
         logger.info(
             f"Nueva petición de video — archivo: {file.filename}, "
-            f"escala: x{scale}, restaurar_caras: {face_enhance}"
+            f"escala: x{scale}, restaurar_caras: {face_enhance}, "
+            f"gfpgan_weight: {gfpgan_weight:.1f}"
         )
 
         process_video.apply_async(
-            args=[task_id, str(input_video_path), str(task_dir), model_key, face_enhance],
+            args=[
+                task_id,
+                str(input_video_path),
+                str(task_dir),
+                model_key,
+                face_enhance,
+                gfpgan_weight,
+            ],
             task_id=task_id,
         )
 

@@ -24,11 +24,17 @@ const btnLabel       = document.getElementById('btn-label');
 const modelGrid      = document.getElementById('model-grid');
 const deviceBadge    = document.getElementById('device-badge');
 const faceEnhanceToggle = document.getElementById('face-enhance-toggle');
+const gfpganIntensity = document.getElementById('gfpgan-intensity');
+const gfpganWeightInput = document.getElementById('gfpgan-weight');
+const gfpganWeightValue = document.getElementById('gfpgan-weight-value');
 const videoDropzone  = document.getElementById('video-dropzone');
 const videoInput     = document.getElementById('video-input');
 const videoDropzoneMeta = document.getElementById('video-dropzone-meta');
 const videoScaleSelect = document.getElementById('video-scale');
 const videoFaceEnhanceToggle = document.getElementById('video-face-enhance-toggle');
+const videoGfpganIntensity = document.getElementById('video-gfpgan-intensity');
+const videoGfpganWeightInput = document.getElementById('video-gfpgan-weight');
+const videoGfpganWeightValue = document.getElementById('video-gfpgan-weight-value');
 const btnEnhanceVideo = document.getElementById('btn-enhance-video');
 const btnVideoLabel = document.getElementById('btn-video-label');
 
@@ -58,11 +64,13 @@ let selectedFile  = null;
 let selectedModel = null;   // se setea cuando cargan los modelos
 let isProcessing  = false;
 let faceEnhanceEnabled = false;
+let gfpganWeight = 0.5;
 let compareValue  = 50;
 let compareDragActive = false;
 let selectedVideoFile = null;
 let isVideoProcessing = false;
 let videoPollingTimer = null;
+let videoGfpganWeight = 0.5;
 
 function getCompareElements() {
   return {
@@ -218,6 +226,21 @@ function clearFile() {
 
 faceEnhanceToggle.addEventListener('change', event => {
   faceEnhanceEnabled = event.target.checked;
+  gfpganIntensity.style.display = faceEnhanceEnabled ? '' : 'none';
+});
+
+gfpganWeightInput.addEventListener('input', event => {
+  gfpganWeight = Number(event.target.value);
+  gfpganWeightValue.textContent = gfpganWeight.toFixed(1);
+});
+
+videoFaceEnhanceToggle.addEventListener('change', event => {
+  videoGfpganIntensity.style.display = event.target.checked ? '' : 'none';
+});
+
+videoGfpganWeightInput.addEventListener('input', event => {
+  videoGfpganWeight = Number(event.target.value);
+  videoGfpganWeightValue.textContent = videoGfpganWeight.toFixed(1);
 });
 
 function showVideoState(state, options = {}) {
@@ -298,6 +321,7 @@ async function processVideo() {
   formData.append('file', selectedVideoFile);
   formData.append('scale', videoScaleSelect.value);
   formData.append('face_enhance', videoFaceEnhanceToggle.checked ? 'true' : 'false');
+  formData.append('gfpgan_weight', videoGfpganWeight.toFixed(1));
 
   try {
     const res = await fetch(`${API}/enhance-video`, {
@@ -476,6 +500,7 @@ async function processImage() {
   formData.append('file',      selectedFile);
   formData.append('model_key', selectedModel);
   formData.append('face_enhance', faceEnhanceEnabled ? 'true' : 'false');
+  formData.append('gfpgan_weight', gfpganWeight.toFixed(1));
 
   try {
     const res = await fetch(`${API}/enhance`, {

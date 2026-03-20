@@ -129,7 +129,7 @@ def _get_upsampler(model_name: str, device: torch.device) -> RealESRGANer:
     return upsampler
 
 
-def enhance_faces(output_path: Path) -> bool:
+def enhance_faces(output_path: Path, weight: float = 0.5) -> bool:
     """
     Restaura caras sobre la imagen ya mejorada por Real-ESRGAN.
     Si algo falla o no hay caras detectables, no interrumpe el flujo.
@@ -161,6 +161,7 @@ def enhance_faces(output_path: Path) -> bool:
             has_aligned=False,
             only_center_face=False,
             paste_back=True,
+            weight=weight,
         )
 
         face_count = len(restored_faces) if restored_faces else 0
@@ -185,6 +186,7 @@ def enhance_image(
     output_path: Path,
     model_key: str = "general_x4",
     face_enhance: bool = False,
+    gfpgan_weight: float = 0.5,
 ) -> dict:
     """
     Procesa una imagen con Real-ESRGAN y la guarda en output_path.
@@ -246,6 +248,7 @@ def enhance_image(
         if "out of memory" in str(e).lower():
             logger.warning("VRAM insuficiente. Reintentando en CPU con tiles pequeños...")
             torch.cuda.empty_cache()
+            model_path = _get_model_path(model_name)
             upsampler_cpu = RealESRGANer(
                 scale=4,
                 model_path=str(model_path),
@@ -270,7 +273,7 @@ def enhance_image(
     face_enhanced = False
     if face_enhance:
         logger.info("GFPGAN activado. Intentando restauración facial...")
-        face_enhanced = enhance_faces(output_path)
+        face_enhanced = enhance_faces(output_path, weight=gfpgan_weight)
 
     t_end = time.time()
 

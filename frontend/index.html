@@ -45,6 +45,23 @@
             <span class="face-toggle-slider" aria-hidden="true"></span>
           </div>
         </label>
+
+        <div class="gfpgan-intensity" id="gfpgan-intensity" style="display:none">
+          <div class="gfpgan-intensity-head">
+            <label class="gfpgan-intensity-label" for="gfpgan-weight">Intensidad GFPGAN</label>
+            <span class="gfpgan-intensity-value" id="gfpgan-weight-value">0.5</span>
+          </div>
+          <input
+            type="range"
+            id="gfpgan-weight"
+            class="gfpgan-intensity-range"
+            min="0"
+            max="1"
+            step="0.1"
+            value="0.5"
+          />
+          <div class="gfpgan-intensity-sub">0.0 = natural · 1.0 = máxima restauración</div>
+        </div>
       </div>
 
       <div class="section-label" style="margin-top:32px">imagen</div>
@@ -94,6 +111,23 @@
               <input type="checkbox" id="video-face-enhance-toggle" />
               <span>Restaurar caras</span>
             </label>
+          </div>
+
+          <div class="gfpgan-intensity gfpgan-intensity--video" id="video-gfpgan-intensity" style="display:none">
+            <div class="gfpgan-intensity-head">
+              <label class="gfpgan-intensity-label" for="video-gfpgan-weight">Intensidad GFPGAN</label>
+              <span class="gfpgan-intensity-value" id="video-gfpgan-weight-value">0.5</span>
+            </div>
+            <input
+              type="range"
+              id="video-gfpgan-weight"
+              class="gfpgan-intensity-range"
+              min="0"
+              max="1"
+              step="0.1"
+              value="0.5"
+            />
+            <div class="gfpgan-intensity-sub">0.0 = natural · 1.0 = máxima restauración</div>
           </div>
 
           <div class="video-warning">El procesamiento puede tardar varios minutos.</div>
