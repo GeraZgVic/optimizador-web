@@ -1,0 +1,60 @@
+# ── Entorno virtual ───────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ── Variables de entorno ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Modelos de IA (archivos grandes, se descargan automáticamente) ────────────
+backend/models/*.pth
+backend/models/*.onnx
+backend/models/*.bin
+
+# ── Archivos temporales de procesamiento ─────────────────────────────────────
+tmp/
+tmp/uploads/
+tmp/outputs/
+tmp/videos/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+celery*.log
+
+# ── IDEs y editores ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── FaceFusion (Módulo 9 — se clona por separado) ────────────────────────────
+facefusion/
+
+
+# GFPGAN / Real-ESRGAN weights
+gfpgan/weights/*.pth
+realesrgan/weights/*.pth
+*.pth

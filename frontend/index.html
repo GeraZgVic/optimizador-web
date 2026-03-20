@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESRGAN — Image Enhancer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-mark">↑</span>
+        <span class="logo-text">ESRGAN</span>
+      </div>
+      <div class="header-badge" id="device-badge">— cargando —</div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ── Panel izquierdo: controles ── -->
+    <section class="panel panel--controls">
+
+      <div class="section-label">modelo</div>
+      <div class="model-grid" id="model-grid">
+        <!-- Llenado dinámicamente por app.js -->
+        <div class="model-card skeleton"></div>
+        <div class="model-card skeleton"></div>
+        <div class="model-card skeleton"></div>
+      </div>
+
+      <div class="face-toggle" id="face-toggle">
+        <label class="face-toggle-row" for="face-enhance-toggle">
+          <div class="face-toggle-copy">
+            <div class="face-toggle-title">Restaurar caras</div>
+            <div class="face-toggle-sub">GFPGAN — recomendado para fotos de personas</div>
+          </div>
+
+          <div class="face-toggle-switch">
+            <input type="checkbox" id="face-enhance-toggle" />
+            <span class="face-toggle-slider" aria-hidden="true"></span>
+          </div>
+        </label>
+      </div>
+
+      <div class="section-label" style="margin-top:32px">imagen</div>
+
+      <!-- Drop zone -->
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp" hidden />
+        <div class="dropzone-icon">⬆</div>
+        <div class="dropzone-text">Arrastra tu imagen aquí</div>
+        <div class="dropzone-sub">o haz clic para seleccionar</div>
+        <div class="dropzone-meta" id="dropzone-meta"></div>
+      </div>
+
+      <!-- Preview original -->
+      <div class="preview-wrap" id="preview-wrap" style="display:none">
+        <img id="preview-img" class="preview-img" alt="preview" />
+        <button class="btn-clear" id="btn-clear" title="Quitar imagen">✕</button>
+      </div>
+
+      <button class="btn-enhance" id="btn-enhance" disabled>
+        <span id="btn-label">Mejorar imagen</span>
+        <span class="btn-arrow">→</span>
+      </button>
+
+      <div class="video-module">
+        <div class="section-label" style="margin-top:32px">video</div>
+
+        <div class="video-box">
+          <div class="video-dropzone" id="video-dropzone">
+            <input type="file" id="video-input" accept=".mp4,.avi,.mov,.mkv" hidden />
+            <div class="video-dropzone-icon">▶</div>
+            <div class="video-dropzone-text">Arrastra tu video aquí</div>
+            <div class="video-dropzone-sub">MP4, AVI, MOV o MKV · máximo recomendado 720p y 2 minutos</div>
+            <div class="video-dropzone-meta" id="video-dropzone-meta"></div>
+          </div>
+
+          <div class="video-controls">
+            <div class="video-field">
+              <label class="video-field-label" for="video-scale">Escala</label>
+              <select id="video-scale" class="video-select">
+                <option value="2">×2</option>
+                <option value="4" selected>×4</option>
+              </select>
+            </div>
+
+            <label class="video-face-toggle" for="video-face-enhance-toggle">
+              <input type="checkbox" id="video-face-enhance-toggle" />
+              <span>Restaurar caras</span>
+            </label>
+          </div>
+
+          <div class="video-warning">El procesamiento puede tardar varios minutos.</div>
+
+          <button class="btn-enhance btn-enhance--video" id="btn-enhance-video" disabled>
+            <span id="btn-video-label">Mejorar video</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── Panel derecho: resultado ── -->
+    <section class="panel panel--result">
+      <div class="section-label">resultado</div>
+
+      <!-- Estado vacío -->
+      <div class="result-empty" id="result-empty">
+        <div class="result-empty-icon">◈</div>
+        <div class="result-empty-text">La imagen mejorada aparecerá aquí</div>
+      </div>
+
+      <!-- Progreso -->
+      <div class="result-progress" id="result-progress" style="display:none">
+        <div class="progress-spinner"></div>
+        <div class="progress-label" id="progress-label">Iniciando procesamiento…</div>
+        <div class="progress-sub">Real-ESRGAN está trabajando</div>
+      </div>
+
+      <!-- Resultado -->
+      <div class="result-done" id="result-done" style="display:none">
+        <div class="compare-shell">
+          <div class="compare-viewer" id="compare-viewer" aria-label="Comparador antes y después">
+            <img id="compare-original-img" class="compare-img compare-img--original" alt="imagen original" />
+            <div class="compare-overlay" id="compare-overlay">
+              <img id="compare-enhanced-img" class="compare-img compare-img--enhanced" alt="imagen mejorada" />
+            </div>
+
+            <div class="compare-label compare-label--left">ORIGINAL</div>
+            <div class="compare-label compare-label--right">MEJORADA</div>
+
+            <div class="compare-divider" id="compare-divider" aria-hidden="true">
+              <div class="compare-handle">
+                <span>◁ ▷</span>
+              </div>
+            </div>
+          </div>
+
+          <input
+            type="range"
+            id="compare-range"
+            class="compare-range"
+            min="0"
+            max="100"
+            value="50"
+            aria-label="Control de comparación antes y después"
+          />
+        </div>
+
+        <div class="result-stats" id="result-stats">
+          <!-- Llenado por app.js -->
+        </div>
+
+        <a class="btn-download" id="btn-download" download>
+          <span>Descargar PNG</span>
+          <span class="btn-arrow">↓</span>
+        </a>
+      </div>
+
+      <!-- Error -->
+      <div class="result-error" id="result-error" style="display:none">
+        <div class="result-error-icon">✕</div>
+        <div class="result-error-msg" id="result-error-msg">Error desconocido</div>
+        <button class="btn-retry" id="btn-retry">Intentar de nuevo</button>
+      </div>
+
+      <div class="video-status" id="video-status">
+        <div class="section-label" style="margin-bottom:10px">video</div>
+
+        <div class="video-status-empty" id="video-status-empty">
+          <div class="video-status-title">Procesamiento de video</div>
+          <div class="video-status-copy">Sube un video en el panel izquierdo para encolarlo con Celery.</div>
+        </div>
+
+        <div class="video-status-progress" id="video-status-progress" style="display:none">
+          <div class="video-progress-head">
+            <div class="video-status-title" id="video-progress-title">Preparando video…</div>
+            <div class="video-progress-percent" id="video-progress-percent">0%</div>
+          </div>
+          <div class="video-progress-bar">
+            <div class="video-progress-fill" id="video-progress-fill"></div>
+          </div>
+          <div class="video-status-copy" id="video-progress-copy">Esperando respuesta del worker…</div>
+        </div>
+
+        <div class="video-status-done" id="video-status-done" style="display:none">
+          <div class="video-status-title">Video listo</div>
+          <div class="video-status-copy" id="video-done-copy">El video mejorado está disponible para descarga.</div>
+          <a class="btn-download" id="btn-download-video" download>
+            <span>Descargar video</span>
+            <span class="btn-arrow">↓</span>
+          </a>
+        </div>
+
+        <div class="video-status-error" id="video-status-error" style="display:none">
+          <div class="video-status-title">Error de video</div>
+          <div class="video-status-copy" id="video-error-msg">No se pudo procesar el video.</div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>Real-ESRGAN — xinntao</span>
+    <span class="footer-sep">·</span>
+    <span>PyTorch</span>
+    <span class="footer-sep">·</span>
+    <span>FastAPI</span>
+    <span class="footer-sep">·</span>
+    <a href="http://localhost:8000/docs" target="_blank">API Docs</a>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
