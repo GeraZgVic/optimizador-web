@@ -26,9 +26,9 @@ MAX_FILE_SIZE_MB    = 10
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 # Resolución máxima de entrada (píxeles totales).
-# Real-ESRGAN x4 convierte una imagen 1000x1000 → 4000x4000.
-# Con tile_size=256 esto es manejable en CPU y GPU.
-MAX_INPUT_PIXELS = 2_500_000  # ~1225x1225 px
+# Real-ESRGAN x4 convierte una imagen 2160x3840 → 8640x15360.
+# Este valor permite imágenes grandes, pero conviene usar tiles pequeños.
+MAX_INPUT_PIXELS = 9_000_000  # ~3000x3000 px equivalentes
 
 # ── Parámetros del modelo ─────────────────────────────────────────────────────
 # Modelos disponibles. Puedes agregar más aquí en el futuro.
@@ -53,9 +53,9 @@ DEFAULT_MODEL = "general_x4"
 
 # tile_size: cuántos píxeles procesa Real-ESRGAN a la vez.
 # Valores más altos = más rápido pero más RAM/VRAM.
-# 256 funciona bien en CPU con 8GB RAM o GPU con 4GB VRAM.
-# Sube a 512 si tienes GPU con 8GB+ VRAM.
-TILE_SIZE    = 256
+# 128 reduce el consumo de memoria y es más seguro para imágenes grandes.
+# Puedes subirlo si priorizas velocidad y tu VRAM lo soporta.
+TILE_SIZE    = 128
 TILE_PADDING = 10   # solapamiento entre tiles para evitar artefactos en los bordes
 
 # ── API ───────────────────────────────────────────────────────────────────────
